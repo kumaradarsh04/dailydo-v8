@@ -1,0 +1,531 @@
+:root {
+    --paper: #F1ECE2;
+    --card: #FAF7F0;
+    --ink: #262420;
+    --ink-soft: #6E6A5F;
+    --moss: #33513C;
+    --moss-soft: #5C7A63;
+    --moss-pale: #E4EAE2;
+    --amber: #B8862F;
+    --line: #DDD6C6;
+    --danger: #A8472F;
+    --danger-pale: #F3E4DE;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+}
+
+.shell {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 0 16px 64px;
+}
+
+/* ---------- Top bar ---------- */
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 0 18px;
+}
+
+.wordmark {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--moss);
+}
+
+.profile {
+    background-color: #262420;
+    /* display: flex;
+      height: 25px;
+      width: 25px;
+      border-radius: 50%;
+      align-items: center; */
+    height: 25px;
+    width: 25px;
+    display: flex;
+    align-items: center;
+    /* gap: 7px; */
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    /* padding: 6px 13px; */
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    cursor: pointer;
+}
+
+/* .profile-section {
+    align-items: center;
+    display: flex;
+} */
+
+.profile-picture {
+    height: 30px;
+    width: 30px;
+    display: none;
+    border-radius: 50%;
+}
+
+.plan-pill {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 6px 13px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    cursor: pointer;
+}
+
+.plan-pill .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--moss-soft);
+}
+
+.plan-pill.premium .dot {
+    background: var(--amber);
+}
+
+.plan-pill .num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    color: var(--ink);
+}
+
+/* ---------- Email gate (overlay) ---------- */
+.gate-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(38, 36, 32, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 50;
+}
+
+.gate-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 32px 28px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+}
+
+.gate-card h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 22px;
+    margin: 0 0 8px;
+}
+
+.gate-card p {
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    line-height: 1.5;
+    margin: 0 0 20px;
+}
+
+.gate-card input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
+    background: var(--paper);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    margin-bottom: 12px;
+}
+
+.gate-card input:focus {
+    outline: none;
+    border-color: var(--moss);
+}
+
+/* ---------- Buttons ---------- */
+button {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    border: none;
+    border-radius: 11px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: transform .1s ease, opacity .15s ease;
+}
+
+button:active {
+    transform: scale(0.97);
+}
+
+.btn-primary {
+    background: var(--moss);
+    color: #fff;
+    width: 100%;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.btn-text {
+    background: transparent;
+    color: var(--ink-soft);
+    padding: 8px 4px;
+    font-weight: 500;
+}
+
+.btn-text:hover {
+    color: var(--ink);
+}
+
+.btn-amber {
+    background: var(--amber);
+    color: #fff;
+}
+
+/* ---------- Dump card ---------- */
+.dump-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.dump-card h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-style: italic;
+    font-size: 23px;
+    margin: 0 0 4px;
+    line-height: 1.25;
+}
+
+.dump-card .sub {
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin: 0 0 16px;
+}
+
+textarea {
+    width: 100%;
+    min-height: 104px;
+    resize: vertical;
+    border: 1.5px solid var(--line);
+    border-radius: 12px;
+    background: var(--paper);
+    padding: 13px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    line-height: 1.5;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--moss);
+}
+
+textarea::placeholder {
+    color: #9C967F;
+}
+
+.dump-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+.dump-actions button {
+    width: auto;
+    padding: 11px 22px;
+}
+
+.status-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--moss-soft);
+    margin-top: 12px;
+    min-height: 18px;
+}
+
+.status-line.error {
+    color: var(--danger);
+}
+
+.spinner {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid var(--moss-soft);
+    border-top-color: transparent;
+    animation: spin .7s linear infinite;
+    flex: none;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ---------- Upgrade banner ---------- */
+.upgrade-banner {
+    display: none;
+    background: var(--danger-pale);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.upgrade-banner p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--ink);
+    flex: 1;
+    min-width: 180px;
+}
+
+.upgrade-banner strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 2px;
+}
+
+/* ---------- Tree panel ---------- */
+.tree-card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 20px;
+}
+
+.tree-card h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 16.5px;
+    margin: 0 0 12px;
+}
+
+.progress-track {
+    height: 6px;
+    border-radius: 100px;
+    background: var(--moss-pale);
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--moss);
+    border-radius: 100px;
+    transition: width .3s ease;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: -11px 0 16px;
+}
+
+.empty {
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    text-align: center;
+    padding: 26px 0;
+    line-height: 1.6;
+}
+
+ul.tree {
+    list-style: none;
+    margin: 0;
+    padding-left: 0;
+}
+
+ul.tree ul.tree {
+    padding-left: 22px;
+    border-left: 1.5px solid var(--line);
+    margin-left: 9px;
+    margin-top: 2px;
+}
+
+li.node {
+    position: relative;
+    margin: 1px 0;
+}
+
+.node-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 6px;
+    border-radius: 9px;
+}
+
+.node-row:hover {
+    background: var(--moss-pale);
+}
+
+.twisty {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--moss-soft);
+    font-size: 11px;
+    margin-top: 2px;
+    user-select: none;
+}
+
+.twisty.leafless {
+    visibility: hidden;
+}
+
+.checkbox {
+    flex: none;
+    width: 19px;
+    height: 19px;
+    margin-top: 1px;
+    border-radius: 6px;
+    border: 1.5px solid var(--moss-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    background: var(--card);
+    color: #fff;
+}
+
+.checkbox.checked {
+    background: var(--moss);
+    border-color: var(--moss);
+}
+
+.node-text {
+    flex: 1;
+    font-size: 14.5px;
+    line-height: 1.45;
+    padding-top: 1px;
+    outline: none;
+    word-break: break-word;
+}
+
+.node-text.checked {
+    color: var(--ink-soft);
+    text-decoration: line-through;
+    text-decoration-color: var(--moss-soft);
+}
+
+.node-actions {
+    display: flex;
+    gap: 2px;
+    flex: none;
+    opacity: 0;
+    transition: opacity .12s ease;
+}
+
+.node-row:hover .node-actions {
+    opacity: 1;
+}
+
+.icon-btn {
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-btn:hover {
+    background: var(--line);
+    color: var(--ink);
+}
+
+.bottom-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 22px;
+}
+
+/* ---------- DailyDo v2 account/save UI ---------- */
+.tree-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.save-state {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 22px;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    background: var(--line);
+    color: var(--ink);
+}
+
+.gate-card {
+    position: relative;
+}
