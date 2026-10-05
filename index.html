@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DailyDo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Sign-in is NOT shown on first visit. It only appears when the user chooses to save. -->
+    <div id="saveModal" class="gate-overlay" style="display:none;">
+        <div class="gate-card">
+            <button id="closeSaveModal" class="modal-close" aria-label="Close">×</button>
+            <h2>Save your plan</h2>
+            <p>Your plan is ready. Sign in to save it to your DailyDo account and access it again later.</p>
+
+            <div id="g_id_onload"
+                data-client_id="215614999054-8seuea0iui18ic4cvnnlp6ko707f1tck.apps.googleusercontent.com"
+                data-callback="handleCredentialResponse"></div>
+            <div class="g_id_signin"></div>
+
+            <div id="authStatus" class="status-line" style="display:none;"></div>
+        </div>
+    </div>
+
+    <div class="shell">
+        <div class="topbar">
+            <div class="wordmark">DailyDo</div>
+
+            <button class="plan-pill" id="planPill" type="button" title="Account">
+                <span id="signedOutLabel">Sign in</span>
+                <img src="" alt="Profile" id="profile-picture"
+                     class="profile-picture" referrerpolicy="no-referrer">
+                <span id="signedInLabel" style="display:none;"></span>
+            </button>
+        </div>
+
+        <div class="dump-card">
+            <h1>Empty your head here</h1>
+            <p class="sub">Write it all down, in any order. We'll turn the chaos into something you can actually act on.</p>
+
+            <textarea id="dumpBox"
+                placeholder="call dentist, finish deck for Thursday, groceries, fix leaking tap, email Sam back, book flights, laundry, renew passport..."></textarea>
+
+            <div class="dump-actions">
+                <button class="btn-primary" id="organizeBtn" style="width:auto;">Organize it</button>
+            </div>
+
+            <div class="status-line" id="status" style="display:none;"></div>
+        </div>
+
+        <div class="upgrade-banner" id="upgradeBanner">
+            <p><strong>You've used all your free organizes</strong>Upgrade for unlimited use.</p>
+            <button class="btn-amber" id="upgradeBtn">Upgrade — ₹399</button>
+        </div>
+
+        <div class="tree-card">
+            <div class="tree-heading-row">
+                <h2>Your next steps</h2>
+                <span id="saveState" class="save-state">Not saved</span>
+            </div>
+
+            <div id="progressWrap" style="display:none;">
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill" style="width:0%;"></div>
+                </div>
+                <div class="progress-label">
+                    <span id="progressText"></span>
+                </div>
+            </div>
+
+            <div id="treeRoot"></div>
+        </div>
+
+        <div class="bottom-row">
+            <button class="btn-text" id="addRootBtn">+ Add manually</button>
+            <button class="btn-text" id="resetAllBtn">Clear everything</button>
+        </div>
+
+        <footer id="footerText">Your plan is kept here until you choose to save it.</footer>
+    </div>
+
+    <script>
+        const BACKEND_BASE = 'http://127.0.0.1:5000';
+
+        let currentUser = null;
+        let tree = [];
+        let idCounter = 1;
+        let saveTimer = null;
+        let saveInFlight = false;
+        let pendingSave = false;
+        let pendingTreeAfterLogin = null;
+
+        window.addEventListener("DOMContentLoaded", init);
+
+        async function init() {
+            render();
+            await loadCurrentUser();
+            document.getElementById('organizeBtn').onclick = organizeDump;
+            document.getElementById('addRootBtn').onclick = addRoot;
+            document.getElementById('resetAllBtn').onclick = clearEverything;
+            document.getElementById('planPill').onclick = accountAction;
+            document.getElementById('closeSaveModal').onclick = hideSaveModal;
+            document.getElementById('upgradeBtn').onclick = upgrade;
+
+            document.getElementById('dumpBox').addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') organizeDump();
+            });
+        }
+
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch(BACKEND_BASE + "/auth/me", {
+                    credentials: "include",
+                    method: "GET"
+                });
+
+                if (!response.ok) {
+                    setAnonymousUI();
+                    return;
+                }
+
+                const data = await response.json();
+                currentUser = data.user;
+                setSignedInUI();
+
+                await loadTreeFromServer();
+            } catch (error) {
+                console.error("Could not check session:", error);
+                setAnonymousUI();
+                setStatus("Couldn't connect to the DailyDo server.", false, true);
+            }
+        }
+
+        async function handleCredentialResponse(response) {
+            setAuthStatus("Signing you in…", true, false);
+
+            try {
+                const result = await fetch(BACKEND_BASE + "/auth/google", {
+                    method: "POST",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ credential: response.credential })
+                });
+
+                const data = await result.json();
+
+                if (!result.ok) {
+                    throw new Error(data.error || "Authentication failed.");
+                }
+
+                currentUser = data.user;
+
+                // IMPORTANT:
+                // If the visitor created a plan before signing in, that in-memory
+                // plan is transferred to the newly authenticated account.
+                if (pendingTreeAfterLogin) {
+                    tree = pendingTreeAfterLogin;
+                    pendingTreeAfterLogin = null;
+                    await saveTreeToServer(true);
+                } else {
+                    await loadTreeFromServer();
+                }
+
+                hideSaveModal();
+                setSignedInUI();
+                setStatus("Your plan is saved ✓", false, false);
+                setTimeout(() => setStatus(null), 2200);
+
+            } catch (error) {
+                console.error(error);
+                setAuthStatus(error.message || "Authentication failed.", false, true);
+            }
+        }
+
+        async function loadTreeFromServer() {
+            try {
+                const response = await fetch(BACKEND_BASE + "/tree", {
+                    credentials: "include",
+                    method: "GET"
+                });
+
+                if (!response.ok) {
+                    throw new Error("Could not load your saved plan.");
+                }
+
+                const data = await response.json();
+                tree = Array.isArray(data.tree) ? data.tree : [];
+                render();
+
+                setSaveState("Saved");
+                document.getElementById('footerText').textContent =
+                    "Your plan is saved to your DailyDo account.";
+            } catch (error) {
+                console.error(error);
+                setSaveState("Couldn't load");
+                setStatus("We couldn't load your saved plan.", false, true);
+            }
+        }
+
+        function queueSave() {
+            if (!currentUser) {
+                setSaveState("Not saved");
+                return;
+            }
+
+            pendingSave = true;
+            setSaveState("Unsaved");
+
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                saveTreeToServer(false);
+            }, 700);
+        }
+
+        async function saveTreeToServer(force = false) {
+            if (!currentUser) return;
+
+            if (saveInFlight) {
+                pendingSave = true;
+                return;
+            }
+
+            pendingSave = false;
+            saveInFlight = true;
+            setSaveState("Saving…");
+
+            try {
+                const response = await fetch(BACKEND_BASE + "/tree", {
+                    method: "PUT",
+                    credentials: "include",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ tree })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Could not save your plan.");
+                }
+
+                setSaveState("Saved");
+                document.getElementById('footerText').textContent =
+                    "Your plan is saved to your DailyDo account.";
+            } catch (error) {
+                console.error("Tree save failed:", error);
+                setSaveState("Save failed");
+                setStatus("Couldn't save your latest change. Please try again.", false, true);
+            } finally {
+                saveInFlight = false;
+
+                if (pendingSave) {
+                    clearTimeout(saveTimer);
+                    saveTimer = setTimeout(() => saveTreeToServer(false), 400);
+                }
+            }
+        }
+
+        function setAnonymousUI() {
+            currentUser = null;
+
+            document.getElementById('signedOutLabel').style.display = 'inline';
+            document.getElementById('signedInLabel').style.display = 'none';
+
+            const picture = document.getElementById('profile-picture');
+            picture.style.display = 'none';
+            picture.src = '';
+
+            setSaveState(tree.length ? "Not saved" : "");
+            document.getElementById('footerText').textContent =
+                "Your plan is kept here until you choose to save it.";
+        }
+
+        function setSignedInUI() {
+            document.getElementById('signedOutLabel').style.display = 'none';
+            document.getElementById('signedInLabel').style.display = 'inline';
+            document.getElementById('signedInLabel').textContent =
+                currentUser.name ? currentUser.name.split(' ')[0] : 'Account';
+
+            const picture = document.getElementById('profile-picture');
+
+            if (currentUser.picture) {
+                picture.style.display = 'block';
+                picture.src = currentUser.picture;
+            } else {
+                picture.style.display = 'none';
+            }
+
+            document.getElementById('footerText').textContent =
+                "Your plan is saved to your DailyDo account.";
+        }
+
+        function accountAction() {
+            if (!currentUser) {
+                // Login is optional. Clicking Sign in is simply another way to
+                // authenticate before or after making a plan.
+                pendingTreeAfterLogin = tree.length ? tree : null;
+                showSaveModal();
+                return;
+            }
+
+            const name = currentUser.name || currentUser.email || "your account";
+
+            if (confirm(`Sign out of ${name}? Your saved plan will remain in your account.`)) {
+                logoutBackend();
+            }
+        }
+
+        async function logoutBackend() {
+            try {
+                await fetch(BACKEND_BASE + '/auth/logout', {
+                    credentials: "include",
+                    method: "POST"
+                });
+            } catch (error) {
+                console.error(error);
+            }
+
+            currentUser = null;
+            setAnonymousUI();
+            tree = [];
+            render();
+            setStatus("Signed out.", false, false);
+            setTimeout(() => setStatus(null), 1800);
+        }
+
+        function showSaveModal() {
+            document.getElementById('saveModal').style.display = 'flex';
+            setAuthStatus(null);
+        }
+
+        function hideSaveModal() {
+            document.getElementById('saveModal').style.display = 'none';
+            setAuthStatus(null);
+        }
+
+        function setAuthStatus(msg, showSpinner = false, isError = false) {
+            const el = document.getElementById('authStatus');
+
+            if (!msg) {
+                el.style.display = 'none';
+                el.innerHTML = '';
+                return;
+            }
+
+            el.style.display = 'flex';
+            el.classList.toggle('error', !!isError);
+            el.innerHTML =
+                (showSpinner ? '<div class="spinner"></div>' : '') +
+                '<span>' + escapeHtml(msg) + '</span>';
+        }
+
+        function newId() {
+            return 'n' + (idCounter++) + '_' + Math.random().toString(36).slice(2, 7);
+        }
+
+        function makeNode(text, children) {
+            return {
+                id: newId(),
+                text: text,
+                checked: false,
+                expanded: true,
+                children: (children || []).map(c => makeNode(c.text, c.children))
+            };
+        }
+
+        function countStats(nodes) {
+            let total = 0, done = 0;
+
+            for (const n of nodes) {
+                total++;
+                if (n.checked) done++;
+
+                if (n.children && n.children.length) {
+                    const s = countStats(n.children);
+                    total += s.total;
+                    done += s.done;
+                }
+            }
+
+            return { total, done };
+        }
+
+        function removeNode(nodes, id) {
+            for (let i = 0; i < nodes.length; i++) {
+                if (nodes[i].id === id) {
+                    nodes.splice(i, 1);
+                    return true;
+                }
+
+                if (nodes[i].children && removeNode(nodes[i].children, id)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        function render() {
+            const rootEl = document.getElementById('treeRoot');
+            const progressWrap = document.getElementById('progressWrap');
+            const stats = countStats(tree);
+
+            if (!tree.length) {
+                progressWrap.style.display = 'none';
+                rootEl.innerHTML =
+                    '<div class="empty">Nothing here yet — write a brain dump above and hit Organize.</div>';
+                return;
+            }
+
+            progressWrap.style.display = 'block';
+
+            const pct = stats.total
+                ? Math.round((stats.done / stats.total) * 100)
+                : 0;
+
+            document.getElementById('progressFill').style.width = pct + '%';
+            document.getElementById('progressText').textContent =
+                `${stats.done} of ${stats.total} done`;
+
+            const ul = document.createElement('ul');
+            ul.className = 'tree';
+            ul.appendChild(renderChildren(tree));
+
+            rootEl.innerHTML = '';
+            rootEl.appendChild(ul);
+        }
+
+        function renderChildren(nodes) {
+            const frag = document.createDocumentFragment();
+
+            for (const node of nodes) {
+                frag.appendChild(renderNode(node));
+            }
+
+            return frag;
+        }
+
+        function renderNode(node) {
+            const li = document.createElement('li');
+            li.className = 'node';
+
+            const row = document.createElement('div');
+            row.className = 'node-row';
+
+            const hasChildren = node.children && node.children.length > 0;
+
+            const twisty = document.createElement('div');
+            twisty.className = 'twisty' + (hasChildren ? '' : ' leafless');
+            twisty.textContent = hasChildren
+                ? (node.expanded ? '▾' : '▸')
+                : '·';
+
+            twisty.onclick = () => {
+                node.expanded = !node.expanded;
+                queueSave();
+                render();
+            };
+
+            row.appendChild(twisty);
+
+            const checkbox = document.createElement('div');
+            checkbox.className = 'checkbox' + (node.checked ? ' checked' : '');
+            checkbox.textContent = node.checked ? '✓' : '';
+
+            checkbox.onclick = () => {
+                node.checked = !node.checked;
+                queueSave();
+                render();
+            };
+
+            row.appendChild(checkbox);
+
+            const textEl = document.createElement('div');
+            textEl.className = 'node-text' + (node.checked ? ' checked' : '');
+            textEl.contentEditable = true;
+            textEl.textContent = node.text;
+
+            textEl.onblur = () => {
+                const nextText = textEl.textContent.trim();
+
+                if (nextText) {
+                    node.text = nextText;
+                    queueSave();
+                }
+            };
+
+            textEl.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    textEl.blur();
+                }
+            };
+
+            row.appendChild(textEl);
+
+            const actions = document.createElement('div');
+            actions.className = 'node-actions';
+
+            const addChildBtn = document.createElement('button');
+            addChildBtn.className = 'icon-btn';
+            addChildBtn.title = 'Add sub-task';
+            addChildBtn.textContent = '+';
+
+            addChildBtn.onclick = () => {
+                node.children = node.children || [];
+                node.children.push(makeNode('new task'));
+                node.expanded = true;
+                queueSave();
+                render();
+            };
+
+            actions.appendChild(addChildBtn);
+
+            const delBtn = document.createElement('button');
+            delBtn.className = 'icon-btn';
+            delBtn.title = 'Delete';
+            delBtn.textContent = '×';
+
+            delBtn.onclick = () => {
+                removeNode(tree, node.id);
+                queueSave();
+                render();
+            };
+
+            actions.appendChild(delBtn);
+            row.appendChild(actions);
+
+            li.appendChild(row);
+
+            if (hasChildren && node.expanded) {
+                const childUl = document.createElement('ul');
+                childUl.className = 'tree';
+                childUl.appendChild(renderChildren(node.children));
+                li.appendChild(childUl);
+            }
+
+            return li;
+        }
+
+        async function organizeDump() {
+            const box = document.getElementById('dumpBox');
+            const text = box.value.trim();
+
+            if (!text) {
+                alert("Please enter your brain dump first.");
+                box.focus();
+                return;
+            }
+
+            const btn = document.getElementById('organizeBtn');
+
+            btn.disabled = true;
+            document.getElementById('upgradeBanner').style.display = 'none';
+            setStatus('sorting this out…', true, false);
+
+            try {
+                const response = await fetch(BACKEND_BASE + '/organize', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 402) {
+                    setStatus(data.message || "You've reached your free limit.", false, true);
+                    document.getElementById('upgradeBanner').style.display = 'flex';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Backend returned an error');
+                }
+
+                const newNodes = (data.nodes || [])
+                    .map(p => makeNode(p.text, p.children));
+
+                if (!newNodes.length) {
+                    throw new Error("DailyDo couldn't find any actionable items in that dump.");
+                }
+
+                // First organize creates the current plan.
+                // Later brain dumps are added to the existing plan.
+                tree = tree.length ? tree.concat(newNodes) : newNodes;
+
+                render();
+                box.value = '';
+
+                if (currentUser) {
+                    await saveTreeToServer(true);
+                    setStatus(
+                        'organized and saved ✓',
+                        false,
+                        false
+                    );
+                } else {
+                    setSaveState("Not saved");
+                    setStatus(
+                        'organized ✓ — your plan is ready',
+                        false,
+                        false
+                    );
+
+                    // Give the user the value first. Then ask them to save.
+                    setTimeout(() => {
+                        if (!currentUser && tree.length) {
+                            showSaveModal();
+                            pendingTreeAfterLogin = tree;
+                        }
+                    }, 500);
+                }
+
+                setTimeout(() => setStatus(null), 2600);
+
+            } catch (e) {
+                console.error(e);
+                setStatus(
+                    "Couldn't organize that — " + e.message,
+                    false,
+                    true
+                );
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function addRoot() {
+            tree.push(makeNode('new item'));
+            render();
+            queueSave();
+        }
+
+        function clearEverything() {
+            if (!tree.length) return;
+
+            if (confirm('Clear everything? This cannot be undone.')) {
+                tree = [];
+                render();
+                queueSave();
+
+                if (currentUser) {
+                    saveTreeToServer(true);
+                }
+
+                setStatus("Plan cleared.", false, false);
+                setTimeout(() => setStatus(null), 1800);
+            }
+        }
+
+        function setSaveState(text) {
+            document.getElementById('saveState').textContent = text || '';
+        }
+
+        function setStatus(msg, showSpinner = false, isError = false) {
+            const el = document.getElementById('status');
+
+            if (!msg) {
+                el.style.display = 'none';
+                el.innerHTML = '';
+                return;
+            }
+
+            el.style.display = 'flex';
+            el.classList.toggle('error', !!isError);
+            el.innerHTML =
+                (showSpinner ? '<div class="spinner"></div>' : '') +
+                '<span>' + escapeHtml(msg) + '</span>';
+        }
+
+        function upgrade() {
+            alert(
+                "Payments are not wired into this new anonymous-first flow yet. " +
+                "We'll connect the account-based plan here later."
+            );
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+    </script>
+</body>
+</html>

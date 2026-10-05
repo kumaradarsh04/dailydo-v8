@@ -1,0 +1,7 @@
+flask
+flask-cors
+requests
+gunicorn
+python-dotenv
+psycopg2-binary
+google-auth
