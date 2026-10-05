@@ -53,7 +53,6 @@ CORS(
 ADMIN_KEY = os.environ.get("ADMIN_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
-RAZORPAY_WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 
 GEMINI_URL = (
@@ -144,7 +143,7 @@ def get_current_user_id():
     Never accept user_id/google_id/email from the frontend as the authority
     for account-owned data.
     """
-    session_id = request.cookies.get("session")
+    session_id = request.cookies.get("__Host-session")
 
     if not session_id:
         return None
@@ -245,7 +244,7 @@ def google_login():
         )
 
         response.set_cookie(
-            key="session",
+            key="__Host-session",
             value=session_id,
             httponly=True,
             secure=secure_cookie,
@@ -292,7 +291,7 @@ def auth_me():
 
 @app.route("/auth/logout", methods=["POST"])
 def logout():
-    session_id = request.cookies.get("session")
+    session_id = request.cookies.get("__Host-session")
 
     if session_id:
         db.delete_session(session_id)
