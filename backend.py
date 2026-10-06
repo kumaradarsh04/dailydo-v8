@@ -143,7 +143,7 @@ def get_current_user_id():
     Never accept user_id/google_id/email from the frontend as the authority
     for account-owned data.
     """
-    session_id = request.cookies.get("__Host-session")
+    session_id = request.cookies.get(COOKIE_NAME)
 
     if not session_id:
         return None
