@@ -54,7 +54,7 @@ ADMIN_KEY = os.environ.get("ADMIN_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
-
+COOKIE_NAME = "__Host-session"
 GEMINI_URL = (
     f"https://generativelanguage.googleapis.com/v1beta/models/"
     f"{GEMINI_MODEL}:generateContent"
@@ -244,11 +244,12 @@ def google_login():
         )
 
         response.set_cookie(
-            key="__Host-session",
+            # key="__Host-session",
+            key=COOKIE_NAME,
             value=session_id,
             httponly=True,
             secure=secure_cookie,
-            samesite="Lax",
+            samesite=None,
             path="/",
             max_age=60 * 60 * 24 * 30
         )
@@ -291,7 +292,8 @@ def auth_me():
 
 @app.route("/auth/logout", methods=["POST"])
 def logout():
-    session_id = request.cookies.get("__Host-session")
+    # session_id = request.cookies.get("__Host-session")
+    session_id = request.cookies.get(COOKIE_NAME)
 
     if session_id:
         db.delete_session(session_id)
@@ -301,7 +303,7 @@ def logout():
     })
 
     response.delete_cookie(
-        key="session",
+        key=COOKIE_NAME,
         path="/"
     )
 
