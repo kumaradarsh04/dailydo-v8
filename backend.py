@@ -441,7 +441,7 @@ def organize():
                 "Content-Type": "application/json"
             },
             json=request_body,
-            timeout=60
+            timeout=180
         )
 
         response.raise_for_status()
