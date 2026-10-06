@@ -249,7 +249,7 @@ def google_login():
             value=session_id,
             httponly=True,
             secure=secure_cookie,
-            samesite=None,
+            samesite="None",
             path="/",
             max_age=60 * 60 * 24 * 30
         )
