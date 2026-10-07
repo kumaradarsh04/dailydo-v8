@@ -67,7 +67,7 @@ Convert this messy brain dump into a well-organized hierarchical task list.
 Rules:
 - Group related tasks under short category headings when it genuinely helps.
 - Category headings should be 2-6 words.
-- Break vague or large tasks into 2-4 concrete sub-steps only when genuinely useful.
+- Break vague or large tasks into tiny smallest executable steps.
 - Keep task text short, specific, and action-oriented.
 - Preserve the user's actual intent.
 - Do not invent unrelated tasks.
@@ -79,7 +79,7 @@ Rules:
 Respond with ONLY a raw JSON array, no markdown fences, no commentary.
 
 Exactly this shape:
-[{{"text": "Category or task", "children": [{{"text": "sub task", "children": []}}]}}]
+[{{"text": "Category/task", "children": [{{"text": "sub task", "children": []}}]}}]
 
 If a top-level item has no natural sub-items, use an empty children array.
 
