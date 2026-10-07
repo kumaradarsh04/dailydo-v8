@@ -45,17 +45,3 @@ def get_response(prompt: str, api_key: str, muse_url: str):
     except Exception as e:
         # print(e)
         return e
-    
-if __name__ == "__main__":
-    data = get_response(
-        "What is the full form of AI? only full form",
-        API_KEY, URL
-    )
-    # print(response)
-
-    if data:
-        data = data.json()
-
-    result_output = data.get("output", [])
-    if result_output:
-        print(result_output[1]["content"][0]["text"])
