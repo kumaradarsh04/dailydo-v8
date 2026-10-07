@@ -20,6 +20,8 @@ Important:
 - The authenticated user is determined from the HttpOnly session cookie.
 """
 
+import test as ai_responser
+
 import os
 import re
 import json
@@ -51,19 +53,13 @@ CORS(
 )
 
 ADMIN_KEY = os.environ.get("ADMIN_KEY", "")
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+MODEL_API_KEY = os.environ.get("MODEL_API_KEY", "")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
+# GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3-flash-preview")
 COOKIE_NAME = "__Host-session"
-GEMINI_URL = (
-    f"https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{GEMINI_MODEL}:generateContent"
-)
-
 
 db.init_pool()
 db.init_db()
-
 
 PROMPT_TEMPLATE = """
 Convert this messy brain dump into a well-organized hierarchical task list.
@@ -425,39 +421,36 @@ def organize():
 
     prompt = PROMPT_TEMPLATE.format(dump=dump_text)
 
-    request_body = {
-        "contents": [{"role": "user","parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.4,
-            "responseMimeType": "application/json"
-        }
-    }
+    # request_body = {
+    #     "contents": [{"role": "user","parts": [{"text": prompt}]}],
+    #     "generationConfig": {
+    #         "temperature": 0.4,
+    #         "responseMimeType": "application/json"
+    #     }
+    # }
 
     try:
-        response = http_requests.post(
-            GEMINI_URL,
-            headers={
-                "x-goog-api-key": GEMINI_API_KEY,
-                "Content-Type": "application/json"
-            },
-            json=request_body,
-            timeout=180
-        )
+        # response = http_requests.post(
+        #     GEMINI_URL,
+        #     headers={
+        #         "x-goog-api-key": GEMINI_API_KEY,
+        #         "Content-Type": "application/json"
+        #     },
+        #     json=request_body,
+        #     timeout=180
+        # )
 
-        response.raise_for_status()
-        data = response.json()
+        # response.raise_for_status()
+        # data = response.json()
 
-        candidates = data.get("candidates", [])
-        if not candidates:
+        data = ai_responser.get_response(prompt, MODEL_API_KEY, "https://api.meta.ai/v1/responses").json()
+        output = data.get("output", [])
+        if not output:
             return jsonify({
-                "error": "Gemini returned no candidates"
+                "error": "Gemini returned no output"
             }), 502
 
-        parts = candidates[0].get("content", {}).get("parts", [])
-        raw_text = "".join(
-            p.get("text", "")
-            for p in parts
-        )
+        raw_text = output[1].get("content", {})[0].get("text", "")
 
         raw_text = strip_code_fences(raw_text)
         parsed = json.loads(raw_text)
@@ -502,8 +495,8 @@ def organize():
 def health():
     return jsonify({
         "status": "ok",
-        "model": GEMINI_MODEL,
-        "key_configured": bool(GEMINI_API_KEY),
+        "model": "muse-spark-1.3-contributor",
+        "key_configured": bool(MODEL_API_KEY),
         "db_configured": bool(db.DATABASE_URL)
     })
 
