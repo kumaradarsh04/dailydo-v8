@@ -400,9 +400,9 @@ def organize():
     A visitor does NOT need an account to experience DailyDo's core value.
     Account authentication is only needed to persist the resulting tree.
     """
-    if not GEMINI_API_KEY:
+    if not MODEL_API_KEY:
         return jsonify({
-            "error": "GEMINI_API_KEY is not set on the server"
+            "error": "MODEL_API_KEY is not set on the server"
         }), 500
 
     payload = request.get_json(silent=True) or {}
@@ -447,7 +447,7 @@ def organize():
         output = data.get("output", [])
         if not output:
             return jsonify({
-                "error": "Gemini returned no output"
+                "error": "Returned no output"
             }), 502
 
         raw_text = output[1].get("content", {})[0].get("text", "")
