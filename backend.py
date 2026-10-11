@@ -451,6 +451,7 @@ def organize():
             }), 502
 
         raw_text = output[1].get("content", {})[0].get("text", "")
+        print(raw_text)
 
         raw_text = strip_code_fences(raw_text)
         parsed = json.loads(raw_text)
