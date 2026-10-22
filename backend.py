@@ -443,7 +443,9 @@ def organize():
         # response.raise_for_status()
         # data = response.json()
 
-        data = ai_responser.get_response(prompt, MODEL_API_KEY, "https://api.meta.ai/v1/responses").json()
+        data = ai_responser.get_response(prompt, MODEL_API_KEY, "https://api.meta.ai/v1/responses")
+        print(data)
+        data = data.json()
         output = data.get("output", [])
         if not output:
             return jsonify({
