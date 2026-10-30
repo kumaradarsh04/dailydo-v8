@@ -24,9 +24,8 @@ def get_response(prompt: str, api_key: str, muse_url: str):
 
     try:
         response = requests.post(
-            muse_url,
+            "https://api.meta.ai/v1/responses",
             headers=headers,
-            # json=payload,
             json=request_body,
         )
         print(response)
