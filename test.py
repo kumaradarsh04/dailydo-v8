@@ -12,15 +12,6 @@ def get_response(prompt: str, api_key: str, muse_url: str):
         "Content-Type": "application/json",
     }
 
-    # payload = {
-    #     "model": "muse-spark-1.3-contributor",
-    #     "input": [{
-    #         "role": "user",
-    #         "content": [{"type": "input_text", "text": prompt}]
-    #     }],
-    #     "stream": False,
-    #     # "max_output_tokens": 1000,
-    # }
     request_body = {
             "model": "muse-spark-1.3-contributor",
             "input": [
@@ -38,10 +29,10 @@ def get_response(prompt: str, api_key: str, muse_url: str):
             # json=payload,
             json=request_body,
         )
-
+        print(response)
         response.raise_for_status()
         return response
 
     except Exception as e:
-        # print(e)
+        print(f"The Error: {e}")
         return e
